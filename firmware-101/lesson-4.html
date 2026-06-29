@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 4 - Memory model: ROM, flash, SRAM, IRAM, PSRAM</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fa;
+      --surface: #ffffff;
+      --surface-2: #eef3f7;
+      --ink: #17202a;
+      --muted: #617080;
+      --line: #d9e0e7;
+      --accent: #176f8f;
+      --accent-2: #8a5a00;
+      --accent-3: #2f7d32;
+      --danger: #9a3412;
+      --code: #0f1720;
+      --code-bg: #e9eef3;
+      --shadow: 0 12px 32px rgba(22, 32, 42, 0.08);
+      --radius: 8px;
+      --sidebar: 292px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.58;
+      overflow-x: hidden;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    code, pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    code {
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 0.08rem 0.28rem;
+      font-size: 0.92em;
+    }
+
+    pre {
+      overflow-x: auto;
+      background: var(--code);
+      color: #eff6ff;
+      border-radius: var(--radius);
+      padding: 1rem;
+      line-height: 1.45;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+    }
+
+    pre code {
+      color: inherit;
+      background: transparent;
+      border: 0;
+      padding: 0;
+      font-size: 0.88rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      border-right: 1px solid var(--line);
+      background: #fbfcfd;
+      padding: 1.25rem;
+    }
+
+    .brand {
+      margin-bottom: 1.35rem;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.18rem;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 0.45rem 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .nav-label {
+      margin: 1.1rem 0 0.4rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      display: grid;
+      gap: 0.2rem;
+    }
+
+    .nav a {
+      display: block;
+      border-radius: 6px;
+      color: #2a3642;
+      padding: 0.42rem 0.55rem;
+      text-decoration: none;
+      font-size: 0.92rem;
+    }
+
+    .nav a:hover {
+      background: var(--surface-2);
+      color: var(--accent);
+    }
+
+    .content {
+      min-width: 0;
+    }
+
+    .hero {
+      min-height: 74vh;
+      display: grid;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(135deg, rgba(23,111,143,0.13), rgba(47,125,50,0.09)),
+        repeating-linear-gradient(90deg, rgba(23,32,42,0.04) 0, rgba(23,32,42,0.04) 1px, transparent 1px, transparent 32px),
+        repeating-linear-gradient(0deg, rgba(23,32,42,0.035) 0, rgba(23,32,42,0.035) 1px, transparent 1px, transparent 32px);
+    }
+
+    .hero-inner,
+    .section-inner {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 3.2rem clamp(1rem, 3vw, 2.5rem);
+    }
+
+    .eyebrow {
+      margin: 0 0 0.8rem;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .hero h2 {
+      max-width: 820px;
+      margin: 0;
+      font-size: clamp(2.35rem, 7vw, 5.4rem);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .hero h2 span {
+      display: block;
+    }
+
+    .hero-text {
+      max-width: 760px;
+      margin: 1.1rem 0 0;
+      color: #344151;
+      font-size: clamp(1rem, 2vw, 1.18rem);
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-top: 1.45rem;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.7);
+      color: #2d3b48;
+      padding: 0.32rem 0.7rem;
+      font-size: 0.84rem;
+      font-weight: 650;
+    }
+
+    section {
+      border-bottom: 1px solid var(--line);
+      background: var(--bg);
+    }
+
+    section:nth-of-type(even) {
+      background: #ffffff;
+    }
+
+    h2 {
+      margin: 0 0 0.7rem;
+      font-size: clamp(1.65rem, 3vw, 2.45rem);
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 1.6rem 0 0.45rem;
+      font-size: 1.08rem;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0.45rem 0 0.9rem;
+    }
+
+    ul, ol {
+      padding-left: 1.3rem;
+    }
+
+    li {
+      margin: 0.32rem 0;
+    }
+
+    .lead {
+      max-width: 830px;
+      color: #3d4b59;
+      font-size: 1.04rem;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-top: 1.4rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card h3 {
+      margin-top: 0;
+    }
+
+    .note {
+      border-left: 4px solid var(--accent);
+      background: #eef8fb;
+      padding: 0.9rem 1rem;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 1rem 0;
+    }
+
+    .warning {
+      border-left-color: var(--danger);
+      background: #fff3ed;
+    }
+
+    .success {
+      border-left-color: var(--accent-3);
+      background: #eff8ef;
+    }
+
+    .diagram {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 1rem;
+      margin: 1.2rem 0;
+      box-shadow: var(--shadow);
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 0.7rem;
+      align-items: stretch;
+    }
+
+    .flow .box,
+    .memory-box,
+    .task-box {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fbfcfd;
+      padding: 0.85rem;
+      min-height: 86px;
+    }
+
+    .flow .box strong,
+    .memory-box strong,
+    .task-box strong {
+      display: block;
+      margin-bottom: 0.25rem;
+      color: #111827;
+    }
+
+    .box small,
+    .memory-box small,
+    .task-box small {
+      color: var(--muted);
+    }
+
+    .memory-map {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+    }
+
+    .memory-box:nth-child(1) { border-top: 5px solid #176f8f; }
+    .memory-box:nth-child(2) { border-top: 5px solid #8a5a00; }
+    .memory-box:nth-child(3) { border-top: 5px solid #2f7d32; }
+    .memory-box:nth-child(4) { border-top: 5px solid #7c3aed; }
+    .memory-box:nth-child(5) { border-top: 5px solid #be123c; }
+    .memory-box:nth-child(6) { border-top: 5px solid #475569; }
+
+    .tasks {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .task-box {
+      min-height: 112px;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 0.55rem;
+      margin-top: 1rem;
+    }
+
+    .check {
+      display: flex;
+      gap: 0.55rem;
+      align-items: flex-start;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface);
+      padding: 0.72rem 0.85rem;
+    }
+
+    .check input {
+      margin-top: 0.28rem;
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--accent);
+    }
+
+    .lesson-footer {
+      margin-top: 2rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      margin-top: 1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1f5f9;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: #475569;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .references {
+      font-size: 0.94rem;
+    }
+
+    .study-track {
+      display: grid;
+      gap: 0.8rem;
+      margin-top: 1.2rem;
+    }
+
+    .study-row {
+      display: grid;
+      grid-template-columns: 8.5rem minmax(0, 1fr);
+      gap: 0.9rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 0.9rem;
+      box-shadow: var(--shadow);
+    }
+
+    .study-row strong {
+      display: block;
+      color: #111827;
+    }
+
+    .study-row small {
+      display: block;
+      margin-top: 0.2rem;
+      color: var(--muted);
+    }
+
+    .method-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin-top: 1.2rem;
+    }
+
+    .method-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 1rem;
+    }
+
+    .method-card h3 {
+      margin-top: 0;
+    }
+
+    .lesson-plan {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+
+    .lesson-plan > div {
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--accent);
+      border-radius: 7px;
+      background: #fbfcfd;
+      padding: 0.8rem;
+      min-height: 112px;
+    }
+
+    .lesson-plan strong {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .questions {
+      display: grid;
+      gap: 0.5rem;
+      margin: 0.8rem 0 1.2rem;
+      padding: 0;
+      list-style: none;
+    }
+
+    .questions li {
+      border-left: 3px solid var(--accent-2);
+      background: #fff8e8;
+      border-radius: 0 7px 7px 0;
+      padding: 0.65rem 0.8rem;
+    }
+
+    .compare-grid {
+      display: grid;
+      gap: 0.8rem;
+      margin: 1rem 0;
+    }
+
+    .compare-row {
+      display: grid;
+      grid-template-columns: 8.5rem minmax(0, 1fr) minmax(0, 1fr);
+      gap: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .compare-row > div {
+      padding: 0.8rem;
+      border-left: 1px solid var(--line);
+    }
+
+    .compare-row > div:first-child {
+      border-left: 0;
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 0.82rem;
+    }
+
+    .compare-row strong {
+      display: block;
+      margin-bottom: 0.25rem;
+      color: #111827;
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        display: block;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid,
+      .flow,
+      .tasks,
+      .lesson-plan,
+      .method-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      html,
+      body,
+      .layout,
+      .content,
+      .hero,
+      section {
+        width: 100vw;
+        max-width: 100vw;
+        min-width: 0;
+        overflow-x: hidden;
+      }
+
+      .grid,
+      .flow,
+      .memory-map,
+      .tasks,
+      .lesson-plan,
+      .method-grid,
+      .compare-row,
+      .study-row {
+        grid-template-columns: 1fr;
+      }
+
+      .compare-row > div {
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .compare-row > div:first-child {
+        border-top: 0;
+      }
+
+      .sidebar {
+        padding: 0.9rem 1rem 0.75rem;
+        overflow-x: hidden;
+      }
+
+      .brand {
+        margin-bottom: 0.75rem;
+      }
+
+      .brand p {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        font-size: 0.86rem;
+      }
+
+      .nav-label {
+        margin-top: 0.75rem;
+      }
+
+      .nav {
+        display: flex;
+        gap: 0.35rem;
+        max-width: 100%;
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+        scrollbar-width: thin;
+      }
+
+      .nav a {
+        flex: 0 0 auto;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        padding: 0.38rem 0.58rem;
+        white-space: nowrap;
+        font-size: 0.86rem;
+      }
+
+      .hero {
+        min-height: 58vh;
+      }
+
+      .hero-inner,
+      .section-inner {
+        width: 100vw;
+        max-width: 100vw;
+        min-width: 0;
+        padding: 2.2rem 1rem;
+      }
+
+      .hero h2 {
+        width: min(358px, 92vw);
+        max-width: min(358px, 92vw);
+        font-size: clamp(2rem, 10.5vw, 2.65rem);
+        overflow-wrap: normal;
+      }
+
+      .hero-text {
+        width: min(358px, 92vw);
+        max-width: min(358px, 92vw);
+        font-size: 1rem;
+      }
+
+      .hero .eyebrow {
+        display: none;
+      }
+
+      .hero-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+        width: min(358px, 92vw);
+        max-width: min(358px, 92vw);
+      }
+
+      .pill {
+        width: 100%;
+        min-width: 0;
+        text-align: center;
+        white-space: normal;
+      }
+
+      .section-inner > h2,
+      .lead {
+        width: min(358px, 92vw);
+        max-width: min(358px, 92vw);
+      }
+    }
+  
+    .page-shell { min-height: 100vh; }
+    .topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem clamp(1rem, 3vw, 2.5rem); border-bottom: 1px solid var(--line); background: rgba(251,252,253,0.94); backdrop-filter: blur(12px); }
+    .topbar a { text-decoration: none; }
+    .topbar-title { color: var(--ink); font-weight: 800; }
+    .topbar-actions { display: flex; gap: 0.5rem; overflow-x: auto; }
+    .topbar-actions a { flex: 0 0 auto; border: 1px solid var(--line); border-radius: 999px; padding: 0.36rem 0.72rem; color: #2a3642; background: #fff; font-size: 0.88rem; }
+    .lesson-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.75rem; margin-top: 1.4rem; }
+    .lesson-link { display: block; min-height: 150px; padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: inherit; text-decoration: none; box-shadow: var(--shadow); }
+    .lesson-link:hover { border-color: rgba(23,111,143,0.45); }
+    .lesson-link strong { display: block; margin-bottom: 0.4rem; color: var(--accent); font-size: 0.78rem; text-transform: uppercase; }
+    .lesson-link span { display: block; color: var(--muted); font-size: 0.92rem; margin-top: 0.4rem; }
+    .page-next { display: flex; justify-content: space-between; gap: 0.75rem; max-width: 1060px; margin: 0 auto; padding: 1.25rem clamp(1rem, 3vw, 2.5rem) 3rem; }
+    .page-next a { border: 1px solid var(--line); border-radius: 999px; padding: 0.55rem 0.9rem; background: #fff; text-decoration: none; color: #2a3642; }
+    .chat-fab { position: fixed; right: 18px; bottom: 18px; z-index: 60; width: 58px; height: 58px; border: 0; border-radius: 999px; background: var(--accent); color: #fff; box-shadow: 0 14px 36px rgba(23,111,143,0.32); font-size: 1.35rem; cursor: pointer; }
+    .chat-panel { position: fixed; right: 18px; bottom: 88px; z-index: 59; width: min(420px, calc(100vw - 28px)); max-height: min(680px, calc(100vh - 112px)); display: none; grid-template-rows: auto 1fr auto; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 18px 58px rgba(22,32,42,0.22); }
+    .chat-panel.open { display: grid; }
+    .chat-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: start; padding: 0.9rem 1rem; border-bottom: 1px solid var(--line); }
+    .chat-head strong { display: block; line-height: 1.25; }
+    .chat-head small { display: block; color: var(--muted); margin-top: 0.2rem; }
+    .chat-close { border: 1px solid var(--line); background: #fff; border-radius: 999px; width: 32px; height: 32px; cursor: pointer; }
+    .chat-log { min-height: 220px; overflow-y: auto; padding: 0.9rem; background: #f8fafc; }
+    .chat-msg { margin: 0 0 0.65rem; padding: 0.72rem 0.82rem; border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .chat-msg.user { margin-left: 2rem; background: #dff3fb; }
+    .chat-msg.assistant { margin-right: 1rem; background: #fff; border: 1px solid var(--line); }
+    .chat-msg.error { background: #fff4ed; border: 1px solid #fed7aa; color: #7c2d12; }
+    .chat-form { display: grid; gap: 0.55rem; padding: 0.85rem; border-top: 1px solid var(--line); }
+    .chat-input { width: 100%; min-height: 78px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem; font: inherit; line-height: 1.45; }
+    .chat-send { border: 0; border-radius: 999px; background: var(--ink); color: #fff; padding: 0.68rem 0.9rem; font-weight: 800; cursor: pointer; }
+    .chat-send:disabled { opacity: 0.58; cursor: wait; }
+    @media (max-width: 760px) { .topbar { align-items: stretch; flex-direction: column; } .page-next { align-items: stretch; flex-direction: column; } .chat-fab { right: 14px; bottom: 14px; } .chat-panel { right: 14px; bottom: 82px; } }
+
+  </style>
+</head>
+<body>
+<main class="page-shell"><header class="topbar"><a class="topbar-title" href="index.html">Firmware 101</a><nav class="topbar-actions" aria-label="Lesson navigation"><a href="lesson-0.html">0</a><a href="lesson-1.html">1</a><a href="lesson-2.html">2</a><a href="lesson-3.html">3</a><a href="lesson-4.html">4</a><a href="lesson-5.html">5</a><a href="lesson-6.html">6</a><a href="lesson-7.html">7</a><a href="lesson-8.html">8</a><a href="lesson-9.html">9</a><a href="lesson-10.html">10</a><a href="lesson-11.html">11</a></nav></header><section id="lesson-4">
+        <div class="section-inner">
+          <p class="eyebrow">Lesson 4</p>
+          <h2>Memory model: ROM, flash, SRAM, IRAM, PSRAM</h2>
+          <p class="lead">
+            Khi đọc firmware, đừng chỉ hỏi “RAM còn bao nhiêu?”. Hãy hỏi vùng memory nào đang được dùng,
+            vì không phải vùng nào cũng giống nhau về tốc độ, khả năng DMA, cache, và thời điểm truy cập.
+          </p>
+
+          <h3>Bài học lý thuyết</h3>
+          <p>
+            Trong app thường, “memory” hay được gom lại thành RAM. Trong firmware, bạn phải tách rõ storage lâu dài, RAM runtime,
+            vùng code chạy nhanh, và vùng buffer ngoại vi. Cùng là bytes, nhưng đặt sai vùng có thể làm build fail, crash runtime,
+            audio rè, LCD giật, hoặc interrupt chết khó hiểu.
+          </p>
+          <p>
+            <strong>ROM</strong> nằm trong chip và không sửa được. <strong>SPI flash</strong> lưu code/app/data lâu dài, nhưng
+            truy cập qua cache và chậm hơn RAM. <strong>SRAM/DRAM</strong> là RAM trong chip, quý nhất cho heap, stack và data
+            cần truy cập nhanh. <strong>IRAM</strong> là RAM instruction cho code cần chạy khi flash cache không sẵn sàng, ví dụ
+            một số interrupt handler. <strong>PSRAM</strong> là RAM ngoài nếu module có, dung lượng lớn hơn nhưng chậm hơn và
+            không phải mọi DMA/peripheral đều dùng trực tiếp được.
+          </p>
+          <p>
+            Khi build, linker đặt code/data vào các section. <code>.text</code> thường là code; <code>.rodata</code> là constant;
+            <code>.data</code> là global/static có giá trị khởi tạo; <code>.bss</code> là global/static zero-initialized. Heap là
+            vùng cấp phát runtime. Task stack là vùng stack riêng cho từng FreeRTOS task. Một local buffer lớn không ăn heap,
+            nó ăn task stack. Một global array lớn có thể ăn DRAM hoặc BSS và làm app thiếu RAM ngay từ lúc boot.
+          </p>
+          <p>
+            DMA là điểm software engineer rất dễ bỏ qua. Một số peripheral như I2S/SPI có thể đọc/ghi memory trực tiếp mà không
+            cần CPU copy từng byte. Nhưng DMA thường yêu cầu buffer nằm ở vùng memory phù hợp, alignment đúng, size đúng. Vì vậy
+            “cứ malloc buffer lớn trong PSRAM” không luôn đúng, nhất là với audio/LCD path.
+          </p>
+          <p>
+            Một cách đọc memory cho firmware là luôn hỏi bốn câu: bytes này sống bao lâu, CPU hay peripheral đọc nó, nó cần nhanh
+            tới mức nào, và nó có được dùng khi flash cache tạm tắt không. Constant text có thể nằm ở flash. Stack frame ngắn hạn
+            nằm trong task stack. Audio buffer dài có thể cần PSRAM nhưng DMA path có thể bắt bạn dùng internal memory. Interrupt
+            handler quan trọng có thể cần IRAM.
+          </p>
+          <p>
+            Ví dụ lỗi rất thật: bạn thêm một array local <code>uint8_t buf[16384]</code> trong audio task có stack 4096 bytes.
+            Heap vẫn báo còn nhiều, nhưng task vẫn panic vì stack tràn. Hoặc bạn đưa LCD frame buffer vào PSRAM, build chạy,
+            nhưng DMA không nhận buffer đó nên màn hình giật hoặc driver báo lỗi. Lesson này dạy bạn không dùng một chữ “RAM”
+            cho mọi vùng nhớ.
+          </p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Vùng</th>
+                  <th>Nó là gì</th>
+                  <th>Dùng cho</th>
+                  <th>Điểm dễ lỗi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>ROM</td>
+                  <td>Code cố định trong chip</td>
+                  <td>ROM bootloader, hàm hệ thống thấp</td>
+                  <td>Không sửa được</td>
+                </tr>
+                <tr>
+                  <td>SPI Flash</td>
+                  <td>Storage ngoài chip, non-volatile</td>
+                  <td>Bootloader, app, NVS, filesystem</td>
+                  <td>Chậm hơn RAM, phụ thuộc cache, erase/write theo block</td>
+                </tr>
+                <tr>
+                  <td>SRAM/DRAM</td>
+                  <td>RAM trong chip</td>
+                  <td>Heap, stack, global data</td>
+                  <td>Ít, stack overflow rất hay gặp</td>
+                </tr>
+                <tr>
+                  <td>IRAM</td>
+                  <td>RAM cho instruction</td>
+                  <td>Interrupt handler, code cần chạy khi flash cache off</td>
+                  <td>Đặt quá nhiều code vào IRAM sẽ hết nhanh</td>
+                </tr>
+                <tr>
+                  <td>PSRAM</td>
+                  <td>RAM ngoài, nếu module có</td>
+                  <td>Buffer lớn: audio, image, UI, network</td>
+                  <td>Chậm hơn, không phải DMA nào cũng dùng được trực tiếp</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Section trong binary</h3>
+          <ul>
+            <li><code>.text</code>: code.</li>
+            <li><code>.rodata</code>: constant/read-only data.</li>
+            <li><code>.data</code>: global/static có giá trị khởi tạo.</li>
+            <li><code>.bss</code>: global/static zero-initialized.</li>
+            <li>Heap: cấp phát runtime bằng allocator.</li>
+            <li>Task stack: stack riêng của từng FreeRTOS task.</li>
+          </ul>
+
+          <pre><code># Sau khi build, xem size và map
+idf.py size
+idf.py size-components
+
+# File map thường nằm trong build/
+ls build/*.map</code></pre>
+
+          <h3>Bài tập tư duy memory</h3>
+          <ul class="questions">
+            <li>Nếu tạo một array global 200 KB thì nó đi vào section nào? Điều gì xảy ra nếu internal RAM không đủ?</li>
+            <li>Nếu tạo local buffer 16 KB trong một task stack 4 KB thì lỗi có thể biểu hiện ra sao?</li>
+            <li>Vì sao interrupt handler thường không nên gọi function tùy tiện hoặc đụng flash khi cache bị tắt?</li>
+            <li>Vì sao audio/LCD buffer lớn có thể cần PSRAM, nhưng DMA path lại có yêu cầu riêng?</li>
+          </ul>
+
+          <h3>Output của Lesson 4</h3>
+          <div class="lesson-plan">
+            <div><strong>Memory table</strong>Tạo bảng riêng của bạn cho ROM, flash, SRAM/DRAM, IRAM, PSRAM: nằm ở đâu, dùng lúc nào, lỗi hay gặp.</div>
+            <div><strong>Section note</strong>Giải thích được <code>.text</code>, <code>.rodata</code>, <code>.data</code>, <code>.bss</code>, heap, task stack.</div>
+            <div><strong>Size reading</strong>Dán output <code>idf.py size</code> và khoanh vùng phần flash, DRAM, IRAM.</div>
+            <div><strong>Lesson 4 self-test</strong>Nhìn một biến global/local/buffer lớn và đoán nó sẽ gây áp lực lên vùng memory nào.</div>
+          </div>
+        </div>
+      </section><nav class="page-next"><a href="lesson-3.html">← Lesson 3</a><a href="lesson-5.html">Lesson 5 →</a></nav></main><button class="chat-fab" type="button" data-chat-fab aria-label="Mở chat hỏi bài" aria-expanded="false">?</button>
+  <aside class="chat-panel" data-chat-panel aria-label="Chat hỏi bài học">
+    <div class="chat-head"><div><strong>Hỏi về bài này</strong><small>Pi agent gateway / OpenAI-compatible API</small></div><button class="chat-close" type="button" data-chat-close aria-label="Đóng chat">x</button></div>
+    <div class="chat-log" data-chat-log></div>
+    <form class="chat-form" data-chat-form><textarea class="chat-input" data-chat-input placeholder="Hỏi chỗ chưa hiểu trong lesson này..."></textarea><button class="chat-send" type="submit">Gửi câu hỏi</button></form>
+  </aside>
+<script>window.LESSON_CONTEXT = {"title":"Lesson 4: Memory model: ROM, flash, SRAM, IRAM, PSRAM","text":"Lesson 4 Memory model: ROM, flash, SRAM, IRAM, PSRAM Khi đọc firmware, đừng chỉ hỏi “RAM còn bao nhiêu?”. Hãy hỏi vùng memory nào đang được dùng, vì không phải vùng nào cũng giống nhau về tốc độ, khả năng DMA, cache, và thời điểm truy cập. Bài học lý thuyết Trong app thường, “memory” hay được gom lại thành RAM. Trong firmware, bạn phải tách rõ storage lâu dài, RAM runtime, vùng code chạy nhanh, và vùng buffer ngoại vi. Cùng là bytes, nhưng đặt sai vùng có thể làm build fail, crash runtime, audio rè, LCD giật, hoặc interrupt chết khó hiểu. ROM nằm trong chip và không sửa được. SPI flash lưu code/app/data lâu dài, nhưng truy cập qua cache và chậm hơn RAM. SRAM/DRAM là RAM trong chip, quý nhất cho heap, stack và data cần truy cập nhanh. IRAM là RAM instruction cho code cần chạy khi flash cache không sẵn sàng, ví dụ một số interrupt handler. PSRAM là RAM ngoài nếu module có, dung lượng lớn hơn nhưng chậm hơn và không phải mọi DMA/peripheral đều dùng trực tiếp được. Khi build, linker đặt code/data vào các section. .text thường là code; .rodata là constant; .data là global/static có giá trị khởi tạo; .bss là global/static zero-initialized. Heap là vùng cấp phát runtime. Task stack là vùng stack riêng cho từng FreeRTOS task. Một local buffer lớn không ăn heap, nó ăn task stack. Một global array lớn có thể ăn DRAM hoặc BSS và làm app thiếu RAM ngay từ lúc boot. DMA là điểm software engineer rất dễ bỏ qua. Một số peripheral như I2S/SPI có thể đọc/ghi memory trực tiếp mà không cần CPU copy từng byte. Nhưng DMA thường yêu cầu buffer nằm ở vùng memory phù hợp, alignment đúng, size đúng. Vì vậy “cứ malloc buffer lớn trong PSRAM” không luôn đúng, nhất là với audio/LCD path. Một cách đọc memory cho firmware là luôn hỏi bốn câu: bytes này sống bao lâu, CPU hay peripheral đọc nó, nó cần nhanh tới mức nào, và nó có được dùng khi flash cache tạm tắt không. Constant text có thể nằm ở flash. Stack frame ngắn hạn nằm trong task stack. Audio buffer dài có thể cần PSRAM nhưng DMA path có thể bắt bạn dùng internal memory. Interrupt handler quan trọng có thể cần IRAM. Ví dụ lỗi rất thật: bạn thêm một array local uint8_t buf[16384] trong audio task có stack 4096 bytes. Heap vẫn báo còn nhiều, nhưng task vẫn panic vì stack tràn. Hoặc bạn đưa LCD frame buffer vào PSRAM, build chạy, nhưng DMA không nhận buffer đó nên màn hình giật hoặc driver báo lỗi. Lesson này dạy bạn không dùng một chữ “RAM” cho mọi vùng nhớ. Vùng Nó là gì Dùng cho Điểm dễ lỗi ROM Code cố định trong chip ROM bootloader, hàm hệ thống thấp Không sửa được SPI Flash Storage ngoài chip, non-volatile Bootloader, app, NVS, filesystem Chậm hơn RAM, phụ thuộc cache, erase/write theo block SRAM/DRAM RAM trong chip Heap, stack, global data Ít, stack overflow rất hay gặp IRAM RAM cho instruction Interrupt handler, code cần chạy khi flash cache off Đặt quá nhiều code vào IRAM sẽ hết nhanh PSRAM RAM ngoài, nếu module có Buffer lớn: audio, image, UI, network Chậm hơn, không phải DMA nào cũng dùng được trực tiếp Section trong binary .text : code. .rodata : constant/read-only data. .data : global/static có giá trị khởi tạo. .bss : global/static zero-initialized. Heap: cấp phát runtime bằng allocator. Task stack: stack riêng của từng FreeRTOS task. # Sau khi build, xem size và map idf.py size idf.py size-components # File map thường nằm trong build/ ls build/*.map Bài tập tư duy memory Nếu tạo một array global 200 KB thì nó đi vào section nào? Điều gì xảy ra nếu internal RAM không đủ? Nếu tạo local buffer 16 KB trong một task stack 4 KB thì lỗi có thể biểu hiện ra sao? Vì sao interrupt handler thường không nên gọi function tùy tiện hoặc đụng flash khi cache bị tắt? Vì sao audio/LCD buffer lớn có thể cần PSRAM, nhưng DMA path lại có yêu cầu riêng? Output của Lesson 4 Memory table Tạo bảng riêng của bạn cho ROM, flash, SRAM/DRAM, IRAM, PSRAM: nằm ở đâu, dùng lúc nào, lỗi hay gặp. Section note Giải thích được .text , .rodata , .data , .bss , heap, task stack. Size reading Dán output idf.py size và khoanh vùng phần flash, DRAM, IRAM. Lesson 4 self-test Nhìn một biến global/local/buffer lớn và đoán nó sẽ gây áp lực lên vùng memory nào."};</script>
+<script>
+(() => {
+  const lesson = window.LESSON_CONTEXT || { title: 'Firmware 101', text: '' };
+  const apiBase = window.FIRMWARE_CHAT_API_BASE || '/v1';
+  const model = window.FIRMWARE_CHAT_MODEL || 'google/gemini-2.5-flash';
+  const fab = document.querySelector('[data-chat-fab]');
+  const panel = document.querySelector('[data-chat-panel]');
+  const close = document.querySelector('[data-chat-close]');
+  const form = document.querySelector('[data-chat-form]');
+  const input = document.querySelector('[data-chat-input]');
+  const log = document.querySelector('[data-chat-log]');
+  if (!fab || !panel || !form || !input || !log) return;
+  const append = (role, text) => {
+    const el = document.createElement('div');
+    el.className = 'chat-msg ' + role;
+    el.textContent = text;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  };
+  const setOpen = (open) => {
+    panel.classList.toggle('open', open);
+    fab.setAttribute('aria-expanded', String(open));
+    if (open) setTimeout(() => input.focus(), 60);
+  };
+  fab.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
+  close?.addEventListener('click', () => setOpen(false));
+  append('assistant', 'Bạn đang hỏi trong ngữ cảnh: ' + lesson.title + '. Hỏi thẳng chỗ chưa hiểu, mình sẽ giải thích theo bài này.');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    append('user', question);
+    const pending = append('assistant', 'Đang hỏi Pi agent...');
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+      const response = await fetch(apiBase.replace(/\/$/, '') + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: 'Bạn là tutor firmware ESP32-S3, trả lời bằng tiếng Việt, ngắn gọn nhưng đủ ý. Dựa chủ yếu vào lesson context được cung cấp. Nếu câu hỏi vượt ngoài bài, nói rõ và nối lại với bài học hiện tại. Không bịa thông tin về thiết bị thật nếu lesson chưa có evidence.' },
+            { role: 'user', content: 'Lesson title: ' + lesson.title + '\n\nLesson context:\n' + lesson.text.slice(0, 12000) + '\n\nCâu hỏi của mình: ' + question }
+          ]
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error?.message || 'Gateway trả lỗi ' + response.status);
+      pending.textContent = data?.choices?.[0]?.message?.content?.trim() || 'Không có nội dung trả lời từ gateway.';
+    } catch (error) {
+      pending.className = 'chat-msg error';
+      pending.textContent = 'Chat chưa gọi được gateway: ' + (error?.message || String(error));
+    } finally {
+      button.disabled = false;
+      input.focus();
+      log.scrollTop = log.scrollHeight;
+    }
+  });
+})();
+</script>
+</body>
+</html>
