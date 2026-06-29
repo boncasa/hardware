@@ -700,8 +700,15 @@
     .chat-msg.error { background: #fff4ed; border: 1px solid #fed7aa; color: #7c2d12; }
     .chat-form { display: grid; gap: 0.55rem; padding: 0.85rem; border-top: 1px solid var(--line); }
     .chat-input { width: 100%; min-height: 78px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem; font: inherit; line-height: 1.45; }
-    .chat-send { border: 0; border-radius: 999px; background: var(--ink); color: #fff; padding: 0.68rem 0.9rem; font-weight: 800; cursor: pointer; }
-    .chat-send:disabled { opacity: 0.58; cursor: wait; }
+    .chat-actions { display: flex; gap: 0.55rem; align-items: center; }
+    .chat-send,
+    .chat-voice { border: 0; border-radius: 999px; padding: 0.68rem 0.9rem; font-weight: 800; cursor: pointer; }
+    .chat-send { background: var(--ink); color: #fff; }
+    .chat-voice { background: #eef8fb; color: var(--accent); border: 1px solid #b8dce8; }
+    .chat-voice.recording { background: #fff3ed; color: #9a3412; border-color: #fed7aa; }
+    .chat-send:disabled,
+    .chat-voice:disabled { opacity: 0.58; cursor: wait; }
+    .chat-audio { display: block; width: 100%; margin-top: 0.55rem; }
     @media (max-width: 760px) { .topbar { align-items: stretch; flex-direction: column; } .page-next { align-items: stretch; flex-direction: column; } .chat-fab { right: 14px; bottom: 14px; } .chat-panel { right: 14px; bottom: 82px; } }
 
   </style>
@@ -816,7 +823,7 @@ esptool.py --chip esp32s3 --port /dev/cu.usbmodemXXXX read_flash 0x0 0x1000000 d
   <aside class="chat-panel" data-chat-panel aria-label="Chat hỏi bài học">
     <div class="chat-head"><div><strong>Hỏi về bài này</strong><small>Pi agent gateway / OpenAI-compatible API</small></div><button class="chat-close" type="button" data-chat-close aria-label="Đóng chat">x</button></div>
     <div class="chat-log" data-chat-log></div>
-    <form class="chat-form" data-chat-form><textarea class="chat-input" data-chat-input placeholder="Hỏi chỗ chưa hiểu trong lesson này..."></textarea><button class="chat-send" type="submit">Gửi câu hỏi</button></form>
+    <form class="chat-form" data-chat-form><textarea class="chat-input" data-chat-input placeholder="Hỏi chỗ chưa hiểu trong lesson này..."></textarea><div class="chat-actions"><button class="chat-voice" type="button" data-chat-voice>Ghi âm</button><button class="chat-send" type="submit">Gửi câu hỏi</button></div></form>
   </aside>
 <script>window.LESSON_CONTEXT = {"title":"Lesson 3: Flash layout và partition table","text":"Lesson 3 Flash layout và partition table External SPI flash là “ổ đĩa” của firmware. Nó chứa bootloader, partition table, app, config NVS, OTA slot, filesystem nhỏ, certificate, asset, hoặc firmware vendor. Bài học lý thuyết ESP32-S3 dùng flash ngoài chip để lưu phần lớn firmware. Flash là non-volatile: tắt nguồn vẫn còn dữ liệu. Nhưng flash không giống RAM. Nó được chia theo offset địa chỉ, ghi/xóa theo block/page, và một số vùng có ý nghĩa đặc biệt. Vì vậy khi “flash firmware”, bạn không chỉ copy một file; bạn đang ghi bytes vào các offset cụ thể. Partition table là bảng mục lục cho flash. Nó nói vùng nào là app, vùng nào là NVS, vùng nào là OTA data, vùng nào là filesystem. Bootloader đọc bảng này để biết app nằm ở offset nào. App cũng đọc bảng này để biết NVS/filesystem nằm ở đâu. Nếu partition table sai hoặc bị ghi đè, bootloader có thể không tìm thấy app dù app binary vẫn còn đâu đó trong flash. OTA là lý do quan trọng khiến firmware hay có nhiều app slot. Thay vì ghi đè app đang chạy, thiết bị tải firmware mới vào slot còn lại, đánh dấu slot đó là candidate, reboot sang slot mới, rồi xác nhận nếu app chạy ổn. Nếu lỗi, bootloader có thể rollback về slot cũ. Đây là cách tránh biến thiết bị thành cục gạch sau một bản update lỗi. NVS khác filesystem. NVS phù hợp cho key-value nhỏ như Wi-Fi credential, calibration, config flag. Filesystem phù hợp cho asset/file lớn hơn như web UI, prompt audio nhỏ, cert bundle. Vendor data là vùng chưa biết: với thiết bị mua sẵn, nó có thể chứa key, calibration hoặc config sản xuất. Rule học DS-02 là vùng nào chưa hiểu thì coi là không được ghi đè. Điểm cần nắm: flash layout là hợp đồng giữa build system, bootloader và app. Build system tạo file theo partition table. Bootloader dựa vào partition table để tìm app. App dựa vào partition table để tìm NVS/filesystem. Nếu bạn đổi một bên mà không hiểu hai bên còn lại, lỗi có thể trông như “boot fail”, “config mất”, hoặc “OTA không lên”. Ví dụ thực tế: một firmware có factory , ota_0 , ota_1 , nvs , otadata và spiffs . App mới được ghi vào ota_1 , nhưng bootloader chỉ chuyển sang đó khi otadata nói slot đó hợp lệ. Nếu app mới boot rồi không confirm, bootloader có thể rollback. Vì vậy “flash app bin” không đồng nghĩa “thiết bị chắc chắn chạy app đó mãi mãi”. Hiểu sai thường gặp: nghĩ backup app partition là đủ. Với thiết bị thật, full flash mới là bản cứu hộ tốt nhất, vì NVS, otadata, key, calibration và filesystem có thể quan trọng ngang app. Lesson này phải khiến bạn nhìn flash như một bản đồ có vùng cần bảo vệ, không phải một file duy nhất. Bootloader Chạy trước app. Khởi tạo flash/cache và chọn app. Partition table Bảng địa chỉ: app0, app1, nvs, otadata, spiffs... Factory / OTA app Binary firmware chính. Có thể có nhiều slot để OTA rollback. NVS Key-value storage cho Wi-Fi credential, config, calibration. Filesystem SPIFFS, LittleFS, FAT cho asset, web UI, audio prompt nhỏ. Vendor data Có thể chứa key, config, model, calibration. Không ghi đè khi chưa hiểu. Lệnh cần biết # Xác định chip và flash esptool.py --chip esp32s3 --port /dev/cu.usbmodemXXXX flash-id # Backup full flash: thay 0x1000000 bằng size thật nếu flash 16 MB esptool.py --chip esp32s3 --port /dev/cu.usbmodemXXXX read_flash 0x0 0x1000000 ds02-full-flash.bin Cách học partition table Draw Vẽ flash như một thanh địa chỉ từ 0x0 tới hết flash. Place Đặt bootloader, partition table, NVS, app slot vào đúng offset. Reason Giải thích vì sao OTA cần ít nhất hai app slot hoặc cơ chế rollback. Protect Đánh dấu vùng chưa hiểu là “không được ghi đè”, đặc biệt trên DS-02. Trước DS-02: đừng flash gì khi chưa dump firmware gốc. Với hardware mua sẵn, flash không chỉ là code app, nó có thể chứa config/kích hoạt/calibration mà mình chưa biết. Output của Lesson 3 Flash map sketch Vẽ một thanh flash có offset cho bootloader, partition table, app, NVS, filesystem hoặc vendor data. Partition explanation Viết 5 dòng giải thích mỗi partition dùng làm gì và partition nào tuyệt đối chưa được ghi đè trên DS-02. Command note Ghi lại command flash-id và command backup full flash, kèm ý nghĩa từng tham số offset/size. Lesson 3 self-test Trả lời được: vì sao OTA thường cần nhiều hơn một app slot?"};</script>
 <script>
@@ -830,6 +837,7 @@ esptool.py --chip esp32s3 --port /dev/cu.usbmodemXXXX read_flash 0x0 0x1000000 d
   const form = document.querySelector('[data-chat-form]');
   const input = document.querySelector('[data-chat-input]');
   const log = document.querySelector('[data-chat-log]');
+  const voiceButton = document.querySelector('[data-chat-voice]');
   if (!fab || !panel || !form || !input || !log) return;
   const append = (role, text) => {
     const el = document.createElement('div');
@@ -839,31 +847,41 @@ esptool.py --chip esp32s3 --port /dev/cu.usbmodemXXXX read_flash 0x0 0x1000000 d
     log.scrollTop = log.scrollHeight;
     return el;
   };
+  const attachAudio = (message, url) => {
+    if (!url) return;
+    const audio = document.createElement('audio');
+    audio.className = 'chat-audio';
+    audio.controls = true;
+    audio.autoplay = true;
+    audio.src = url;
+    message.appendChild(document.createElement('br'));
+    message.appendChild(audio);
+    audio.play().catch(() => {});
+  };
   const setOpen = (open) => {
     panel.classList.toggle('open', open);
     fab.setAttribute('aria-expanded', String(open));
     if (open) setTimeout(() => input.focus(), 60);
   };
-  fab.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
-  close?.addEventListener('click', () => setOpen(false));
-  append('assistant', 'Bạn đang hỏi trong ngữ cảnh: ' + lesson.title + '. Hỏi thẳng chỗ chưa hiểu, mình sẽ giải thích theo bài này.');
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const question = input.value.trim();
-    if (!question) return;
-    input.value = '';
+  const endpoint = (path) => apiBase.replace(/\/$/, '') + path;
+  const lessonSystemPrompt = 'Bạn là tutor firmware ESP32-S3, trả lời bằng tiếng Việt, ngắn gọn nhưng đủ ý. Dựa chủ yếu vào lesson context được cung cấp. Nếu câu hỏi vượt ngoài bài, nói rõ và nối lại với bài học hiện tại. Không bịa thông tin về thiết bị thật nếu lesson chưa có evidence.';
+  const setBusy = (busy) => {
+    const sendButton = form.querySelector('button[type="submit"]');
+    sendButton.disabled = busy;
+    if (voiceButton) voiceButton.disabled = busy && !voiceButton.classList.contains('recording');
+  };
+  const sendTextQuestion = async (question) => {
     append('user', question);
     const pending = append('assistant', 'Đang hỏi Pi agent...');
-    const button = form.querySelector('button[type="submit"]');
-    button.disabled = true;
+    setBusy(true);
     try {
-      const response = await fetch(apiBase.replace(/\/$/, '') + '/chat/completions', {
+      const response = await fetch(endpoint('/chat/completions'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model,
           messages: [
-            { role: 'system', content: 'Bạn là tutor firmware ESP32-S3, trả lời bằng tiếng Việt, ngắn gọn nhưng đủ ý. Dựa chủ yếu vào lesson context được cung cấp. Nếu câu hỏi vượt ngoài bài, nói rõ và nối lại với bài học hiện tại. Không bịa thông tin về thiết bị thật nếu lesson chưa có evidence.' },
+            { role: 'system', content: lessonSystemPrompt },
             { role: 'user', content: 'Lesson title: ' + lesson.title + '\n\nLesson context:\n' + lesson.text.slice(0, 12000) + '\n\nCâu hỏi của mình: ' + question }
           ]
         })
@@ -875,10 +893,85 @@ esptool.py --chip esp32s3 --port /dev/cu.usbmodemXXXX read_flash 0x0 0x1000000 d
       pending.className = 'chat-msg error';
       pending.textContent = 'Chat chưa gọi được gateway: ' + (error?.message || String(error));
     } finally {
-      button.disabled = false;
+      setBusy(false);
       input.focus();
       log.scrollTop = log.scrollHeight;
     }
+  };
+  const sendVoiceQuestion = async (blob) => {
+    const userMessage = append('user', '[voice] Đã gửi câu hỏi bằng giọng nói.');
+    const pending = append('assistant', 'Đang nghe bằng Whisper local...');
+    setBusy(true);
+    try {
+      const body = new FormData();
+      body.append('model', model);
+      body.append('lesson_title', lesson.title);
+      body.append('lesson_context', lesson.text.slice(0, 12000));
+      body.append('audio', blob, 'question.webm');
+      const response = await fetch(endpoint('/voice/messages'), { method: 'POST', body });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error?.message || 'Gateway trả lỗi ' + response.status);
+      userMessage.textContent = '[voice transcript] ' + (data.transcript || '(không nghe được transcript)');
+      pending.textContent = data.text || 'Không có nội dung trả lời từ gateway.';
+      attachAudio(pending, data.audio_url);
+    } catch (error) {
+      pending.className = 'chat-msg error';
+      pending.textContent = 'Voice chat chưa gọi được gateway: ' + (error?.message || String(error));
+    } finally {
+      setBusy(false);
+      log.scrollTop = log.scrollHeight;
+    }
+  };
+  let recorder = null;
+  let chunks = [];
+  const stopRecording = () => {
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+  };
+  const startRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      append('error', 'Trình duyệt này chưa hỗ trợ ghi âm trong web chat.');
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chunks = [];
+    const preferred = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : '';
+    recorder = new MediaRecorder(stream, preferred ? { mimeType: preferred } : undefined);
+    recorder.addEventListener('dataavailable', (event) => {
+      if (event.data.size > 0) chunks.push(event.data);
+    });
+    recorder.addEventListener('stop', () => {
+      stream.getTracks().forEach((track) => track.stop());
+      voiceButton?.classList.remove('recording');
+      if (voiceButton) voiceButton.textContent = 'Ghi âm';
+      const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+      if (blob.size > 0) void sendVoiceQuestion(blob);
+    });
+    recorder.start();
+    voiceButton?.classList.add('recording');
+    if (voiceButton) voiceButton.textContent = 'Dừng';
+  };
+  fab.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
+  close?.addEventListener('click', () => setOpen(false));
+  voiceButton?.addEventListener('click', async () => {
+    try {
+      if (voiceButton.classList.contains('recording')) {
+        stopRecording();
+      } else {
+        await startRecording();
+      }
+    } catch (error) {
+      append('error', 'Không mở được microphone: ' + (error?.message || String(error)));
+      voiceButton?.classList.remove('recording');
+      if (voiceButton) voiceButton.textContent = 'Ghi âm';
+    }
+  });
+  append('assistant', 'Bạn đang hỏi trong ngữ cảnh: ' + lesson.title + '. Hỏi thẳng chỗ chưa hiểu, hoặc bấm Ghi âm để hỏi bằng giọng nói.');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    await sendTextQuestion(question);
   });
 })();
 </script>

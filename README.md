@@ -32,7 +32,13 @@ The Pi agent gateway is expected to expose an OpenAI-compatible API:
 ```text
 GET /v1/models
 POST /v1/chat/completions
+POST /v1/voice/messages
+GET /v1/voice/audio/:id.mp3
 ```
+
+Text questions use `/v1/chat/completions`. Voice questions use the local-first
+pipeline in `pi-agents-gateway`: browser audio upload, `whisper-cli` STT,
+Pi text answer, macOS `say` TTS, then an MP3 response.
 
 ## Tailnet Preview
 
@@ -42,4 +48,4 @@ On the current machine, Tailscale Serve can proxy HTTPS root to the local server
 https://nams-mac-mini-2.tail15870.ts.net -> http://127.0.0.1:8766
 ```
 
-The chat widget calls same-origin `/v1/chat/completions`, so the server proxy avoids mobile browser CORS and mixed-content issues.
+The chat widget calls same-origin `/v1/*`, so the server proxy avoids mobile browser CORS and mixed-content issues.

@@ -700,8 +700,15 @@
     .chat-msg.error { background: #fff4ed; border: 1px solid #fed7aa; color: #7c2d12; }
     .chat-form { display: grid; gap: 0.55rem; padding: 0.85rem; border-top: 1px solid var(--line); }
     .chat-input { width: 100%; min-height: 78px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem; font: inherit; line-height: 1.45; }
-    .chat-send { border: 0; border-radius: 999px; background: var(--ink); color: #fff; padding: 0.68rem 0.9rem; font-weight: 800; cursor: pointer; }
-    .chat-send:disabled { opacity: 0.58; cursor: wait; }
+    .chat-actions { display: flex; gap: 0.55rem; align-items: center; }
+    .chat-send,
+    .chat-voice { border: 0; border-radius: 999px; padding: 0.68rem 0.9rem; font-weight: 800; cursor: pointer; }
+    .chat-send { background: var(--ink); color: #fff; }
+    .chat-voice { background: #eef8fb; color: var(--accent); border: 1px solid #b8dce8; }
+    .chat-voice.recording { background: #fff3ed; color: #9a3412; border-color: #fed7aa; }
+    .chat-send:disabled,
+    .chat-voice:disabled { opacity: 0.58; cursor: wait; }
+    .chat-audio { display: block; width: 100%; margin-top: 0.55rem; }
     @media (max-width: 760px) { .topbar { align-items: stretch; flex-direction: column; } .page-next { align-items: stretch; flex-direction: column; } .chat-fab { right: 14px; bottom: 14px; } .chat-panel { right: 14px; bottom: 82px; } }
 
   </style>
@@ -819,7 +826,7 @@ idf.py size-files</code></pre>
   <aside class="chat-panel" data-chat-panel aria-label="Chat hỏi bài học">
     <div class="chat-head"><div><strong>Hỏi về bài này</strong><small>Pi agent gateway / OpenAI-compatible API</small></div><button class="chat-close" type="button" data-chat-close aria-label="Đóng chat">x</button></div>
     <div class="chat-log" data-chat-log></div>
-    <form class="chat-form" data-chat-form><textarea class="chat-input" data-chat-input placeholder="Hỏi chỗ chưa hiểu trong lesson này..."></textarea><button class="chat-send" type="submit">Gửi câu hỏi</button></form>
+    <form class="chat-form" data-chat-form><textarea class="chat-input" data-chat-input placeholder="Hỏi chỗ chưa hiểu trong lesson này..."></textarea><div class="chat-actions"><button class="chat-voice" type="button" data-chat-voice>Ghi âm</button><button class="chat-send" type="submit">Gửi câu hỏi</button></div></form>
   </aside>
 <script>window.LESSON_CONTEXT = {"title":"Lesson 7: Build artifacts: .elf, .bin, .map","text":"Lesson 7 Build artifacts: .elf , .bin , .map Build firmware không chỉ tạo một file app. ESP-IDF tạo nhiều artifact, mỗi cái trả lời một câu hỏi khác nhau. Bài học lý thuyết Khi chạy idf.py build , toolchain compile source thành object files, link chúng thành một ELF, rồi tạo các binary image để flash. Nếu chỉ nhìn “build succeeded”, bạn bỏ lỡ phần quan trọng nhất: build đã tạo file nào, file đó ghi vào offset nào, và symbol nào đang dùng RAM/IRAM/flash. .elf là file giàu thông tin nhất cho debug. Nó chứa symbol, address mapping và thông tin để decode backtrace. Khi panic log in ra PC/address, bạn cần ELF đúng build để biết address đó thuộc function nào. .bin là image được flash vào chip; nó phù hợp để nạp firmware, nhưng nghèo thông tin hơn cho debug. .map là báo cáo của linker. Nó trả lời câu hỏi “ai đang ăn memory?”. Khi firmware tự nhiên vượt IRAM, DRAM giảm mạnh, hoặc binary phình ra, map file giúp tìm component/symbol lớn. idf.py size cho cái nhìn tổng quan; map file cho điều tra chi tiết. Flash command cũng là tài liệu. Nó thường ghi bootloader vào một offset, partition table vào offset khác, app binary vào offset app. Đọc command flash giúp bạn nối Lesson 3 với build thật: file nào đi vào vùng nào của flash. Build artifact là cách firmware để lại dấu vết kiểm chứng. Source code nói “mình muốn build gì”. Artifact nói “toolchain thật sự tạo ra gì”. Khi một thay đổi làm app lớn thêm 400 KB, build log và size output cho bạn biết đó là flash code, rodata, DRAM hay IRAM. Khi panic backtrace có địa chỉ, ELF cho bạn dịch địa chỉ thành function. Khi nghi partition sai, command flash cho bạn biết file nào đã đi vào offset nào. Hiểu sai thường gặp: gửi cho người khác mỗi file .bin rồi hỏi decode crash. Nếu không có đúng .elf của build đó, backtrace mất phần lớn giá trị. Một firmware workflow tử tế lưu commit, sdkconfig, ELF, MAP, BIN và log cùng nhau. Lesson này dạy bạn giữ evidence để debug được sau này. File Ý nghĩa Khi nào đọc .elf Binary giàu symbol/debug info Backtrace decode, debugging, size analysis .bin Image flash được Khi nạp bootloader/app/partition .map Linker map: symbol nằm ở đâu, chiếm bao nhiêu Khi RAM/IRAM/flash phình ra hoặc cần hiểu memory layout partition-table.bin Binary của partition table Khi kiểm tra flash layout/OTA/NVS idf.py build idf.py flash monitor idf.py partition-table idf.py size idf.py size-files Artifact reading order 1. Build log What got built? Xem bootloader, partition table, app binary được tạo ở path nào. Đừng chỉ nhìn “build succeeded”. 2. Partition table Where will it flash? Đối chiếu offset trong command flash với partition table để hiểu từng file sẽ ghi vào vùng nào. 3. Size output How big is each section? Nhìn flash code/data, DRAM, IRAM. Khi một feature làm size tăng mạnh, quay lại đây. 4. Map file Who used the memory? Dùng khi muốn biết symbol/component cụ thể nào đang ăn RAM/IRAM/flash. Output của Lesson 7 Artifact inventory Liệt kê file build tạo ra: bootloader bin, partition-table bin, app bin, ELF, MAP; mỗi file trả lời câu hỏi gì. Flash command reading Đọc một command flash và chỉ ra file nào được ghi vào offset nào. Map file probe Mở .map , tìm một symbol/component lớn và ghi lại nó nằm ở section nào. Lesson 7 self-test Trả lời được: khi crash backtrace cần file .elf hay .bin , và vì sao?"};</script>
 <script>
@@ -833,6 +840,7 @@ idf.py size-files</code></pre>
   const form = document.querySelector('[data-chat-form]');
   const input = document.querySelector('[data-chat-input]');
   const log = document.querySelector('[data-chat-log]');
+  const voiceButton = document.querySelector('[data-chat-voice]');
   if (!fab || !panel || !form || !input || !log) return;
   const append = (role, text) => {
     const el = document.createElement('div');
@@ -842,31 +850,41 @@ idf.py size-files</code></pre>
     log.scrollTop = log.scrollHeight;
     return el;
   };
+  const attachAudio = (message, url) => {
+    if (!url) return;
+    const audio = document.createElement('audio');
+    audio.className = 'chat-audio';
+    audio.controls = true;
+    audio.autoplay = true;
+    audio.src = url;
+    message.appendChild(document.createElement('br'));
+    message.appendChild(audio);
+    audio.play().catch(() => {});
+  };
   const setOpen = (open) => {
     panel.classList.toggle('open', open);
     fab.setAttribute('aria-expanded', String(open));
     if (open) setTimeout(() => input.focus(), 60);
   };
-  fab.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
-  close?.addEventListener('click', () => setOpen(false));
-  append('assistant', 'Bạn đang hỏi trong ngữ cảnh: ' + lesson.title + '. Hỏi thẳng chỗ chưa hiểu, mình sẽ giải thích theo bài này.');
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const question = input.value.trim();
-    if (!question) return;
-    input.value = '';
+  const endpoint = (path) => apiBase.replace(/\/$/, '') + path;
+  const lessonSystemPrompt = 'Bạn là tutor firmware ESP32-S3, trả lời bằng tiếng Việt, ngắn gọn nhưng đủ ý. Dựa chủ yếu vào lesson context được cung cấp. Nếu câu hỏi vượt ngoài bài, nói rõ và nối lại với bài học hiện tại. Không bịa thông tin về thiết bị thật nếu lesson chưa có evidence.';
+  const setBusy = (busy) => {
+    const sendButton = form.querySelector('button[type="submit"]');
+    sendButton.disabled = busy;
+    if (voiceButton) voiceButton.disabled = busy && !voiceButton.classList.contains('recording');
+  };
+  const sendTextQuestion = async (question) => {
     append('user', question);
     const pending = append('assistant', 'Đang hỏi Pi agent...');
-    const button = form.querySelector('button[type="submit"]');
-    button.disabled = true;
+    setBusy(true);
     try {
-      const response = await fetch(apiBase.replace(/\/$/, '') + '/chat/completions', {
+      const response = await fetch(endpoint('/chat/completions'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model,
           messages: [
-            { role: 'system', content: 'Bạn là tutor firmware ESP32-S3, trả lời bằng tiếng Việt, ngắn gọn nhưng đủ ý. Dựa chủ yếu vào lesson context được cung cấp. Nếu câu hỏi vượt ngoài bài, nói rõ và nối lại với bài học hiện tại. Không bịa thông tin về thiết bị thật nếu lesson chưa có evidence.' },
+            { role: 'system', content: lessonSystemPrompt },
             { role: 'user', content: 'Lesson title: ' + lesson.title + '\n\nLesson context:\n' + lesson.text.slice(0, 12000) + '\n\nCâu hỏi của mình: ' + question }
           ]
         })
@@ -878,10 +896,85 @@ idf.py size-files</code></pre>
       pending.className = 'chat-msg error';
       pending.textContent = 'Chat chưa gọi được gateway: ' + (error?.message || String(error));
     } finally {
-      button.disabled = false;
+      setBusy(false);
       input.focus();
       log.scrollTop = log.scrollHeight;
     }
+  };
+  const sendVoiceQuestion = async (blob) => {
+    const userMessage = append('user', '[voice] Đã gửi câu hỏi bằng giọng nói.');
+    const pending = append('assistant', 'Đang nghe bằng Whisper local...');
+    setBusy(true);
+    try {
+      const body = new FormData();
+      body.append('model', model);
+      body.append('lesson_title', lesson.title);
+      body.append('lesson_context', lesson.text.slice(0, 12000));
+      body.append('audio', blob, 'question.webm');
+      const response = await fetch(endpoint('/voice/messages'), { method: 'POST', body });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error?.message || 'Gateway trả lỗi ' + response.status);
+      userMessage.textContent = '[voice transcript] ' + (data.transcript || '(không nghe được transcript)');
+      pending.textContent = data.text || 'Không có nội dung trả lời từ gateway.';
+      attachAudio(pending, data.audio_url);
+    } catch (error) {
+      pending.className = 'chat-msg error';
+      pending.textContent = 'Voice chat chưa gọi được gateway: ' + (error?.message || String(error));
+    } finally {
+      setBusy(false);
+      log.scrollTop = log.scrollHeight;
+    }
+  };
+  let recorder = null;
+  let chunks = [];
+  const stopRecording = () => {
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+  };
+  const startRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      append('error', 'Trình duyệt này chưa hỗ trợ ghi âm trong web chat.');
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chunks = [];
+    const preferred = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : '';
+    recorder = new MediaRecorder(stream, preferred ? { mimeType: preferred } : undefined);
+    recorder.addEventListener('dataavailable', (event) => {
+      if (event.data.size > 0) chunks.push(event.data);
+    });
+    recorder.addEventListener('stop', () => {
+      stream.getTracks().forEach((track) => track.stop());
+      voiceButton?.classList.remove('recording');
+      if (voiceButton) voiceButton.textContent = 'Ghi âm';
+      const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+      if (blob.size > 0) void sendVoiceQuestion(blob);
+    });
+    recorder.start();
+    voiceButton?.classList.add('recording');
+    if (voiceButton) voiceButton.textContent = 'Dừng';
+  };
+  fab.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
+  close?.addEventListener('click', () => setOpen(false));
+  voiceButton?.addEventListener('click', async () => {
+    try {
+      if (voiceButton.classList.contains('recording')) {
+        stopRecording();
+      } else {
+        await startRecording();
+      }
+    } catch (error) {
+      append('error', 'Không mở được microphone: ' + (error?.message || String(error)));
+      voiceButton?.classList.remove('recording');
+      if (voiceButton) voiceButton.textContent = 'Ghi âm';
+    }
+  });
+  append('assistant', 'Bạn đang hỏi trong ngữ cảnh: ' + lesson.title + '. Hỏi thẳng chỗ chưa hiểu, hoặc bấm Ghi âm để hỏi bằng giọng nói.');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    await sendTextQuestion(question);
   });
 })();
 </script>

@@ -700,8 +700,15 @@
     .chat-msg.error { background: #fff4ed; border: 1px solid #fed7aa; color: #7c2d12; }
     .chat-form { display: grid; gap: 0.55rem; padding: 0.85rem; border-top: 1px solid var(--line); }
     .chat-input { width: 100%; min-height: 78px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem; font: inherit; line-height: 1.45; }
-    .chat-send { border: 0; border-radius: 999px; background: var(--ink); color: #fff; padding: 0.68rem 0.9rem; font-weight: 800; cursor: pointer; }
-    .chat-send:disabled { opacity: 0.58; cursor: wait; }
+    .chat-actions { display: flex; gap: 0.55rem; align-items: center; }
+    .chat-send,
+    .chat-voice { border: 0; border-radius: 999px; padding: 0.68rem 0.9rem; font-weight: 800; cursor: pointer; }
+    .chat-send { background: var(--ink); color: #fff; }
+    .chat-voice { background: #eef8fb; color: var(--accent); border: 1px solid #b8dce8; }
+    .chat-voice.recording { background: #fff3ed; color: #9a3412; border-color: #fed7aa; }
+    .chat-send:disabled,
+    .chat-voice:disabled { opacity: 0.58; cursor: wait; }
+    .chat-audio { display: block; width: 100%; margin-top: 0.55rem; }
     @media (max-width: 760px) { .topbar { align-items: stretch; flex-direction: column; } .page-next { align-items: stretch; flex-direction: column; } .chat-fab { right: 14px; bottom: 14px; } .chat-panel { right: 14px; bottom: 82px; } }
 
   </style>
@@ -787,7 +794,7 @@
   <aside class="chat-panel" data-chat-panel aria-label="Chat hỏi bài học">
     <div class="chat-head"><div><strong>Hỏi về bài này</strong><small>Pi agent gateway / OpenAI-compatible API</small></div><button class="chat-close" type="button" data-chat-close aria-label="Đóng chat">x</button></div>
     <div class="chat-log" data-chat-log></div>
-    <form class="chat-form" data-chat-form><textarea class="chat-input" data-chat-input placeholder="Hỏi chỗ chưa hiểu trong lesson này..."></textarea><button class="chat-send" type="submit">Gửi câu hỏi</button></form>
+    <form class="chat-form" data-chat-form><textarea class="chat-input" data-chat-input placeholder="Hỏi chỗ chưa hiểu trong lesson này..."></textarea><div class="chat-actions"><button class="chat-voice" type="button" data-chat-voice>Ghi âm</button><button class="chat-send" type="submit">Gửi câu hỏi</button></div></form>
   </aside>
 <script>window.LESSON_CONTEXT = {"title":"Lesson 10: Áp dụng vào DS-02 mà vẫn an toàn","text":"Lesson 10 Áp dụng vào DS-02 mà vẫn an toàn Với thiết bị TanDev/DS-02, mục tiêu học là hiểu máy đang sống thế nào trước khi thay não nó. Vì vậy thứ tự đúng là observe, backup, identify, rồi mới flash lab nhỏ. Bài học lý thuyết Thiết bị mua sẵn không giống dev board trống. Nó đã có firmware vendor, partition riêng, config sản xuất, có thể có calibration, key, certificate, model file, hoặc asset trong flash. Nếu bạn flash bừa, bạn có thể xóa thứ không tải lại được từ internet. Vì vậy bước học đầu tiên với DS-02 là quan sát và backup, không phải sửa. Observe nghĩa là cắm serial, capture boot log, ghi reset reason, chip revision, flash mode/size, PSRAM, firmware string nếu có. Backup nghĩa là đọc full flash từ offset 0 tới hết dung lượng thật và lưu file rõ ràng. Identify nghĩa là suy ra partition, peripheral, pin map từ log, PCB, I2C scan, code tham khảo, không đoán một nguồn duy nhất là đúng. Khi đọc xiaozhi-esp32 , đừng đọc từ file ngẫu nhiên. Đọc theo runtime path: entry/state machine trước, board config sau, audio pipeline sau nữa, protocol/network, cuối cùng display/UI. Mục tiêu là trả lời “thiết bị này boot xong tạo task nào, task nào nói chuyện với peripheral nào, data audio đi qua những buffer nào”. Điều kiện được flash lab nhỏ lên DS-02 phải rất rõ: đã có full backup, đã biết flash size thật, đã giữ được boot log gốc, biết vùng nào lab sẽ ghi đè, và chấp nhận cách restore. Nếu một điều kiện chưa đạt, lab nên chạy trên dev board hoặc dừng lại ở observe-only. DS-02 nên được học như một hệ thống thật, không phải như board ESP32 trống. Bạn không biết vendor đã lưu gì trong NVS, filesystem hoặc partition riêng. Bạn cũng chưa chắc pinout public khớp đúng revision trên tay. Vì vậy method đúng là tạo hồ sơ thiết bị trước: ảnh board nếu có, serial log, flash id, backup hash, partition nghi ngờ, peripheral nghi ngờ, và danh sách vùng không được ghi. Khi đọc code tham khảo như xiaozhi-esp32 , câu hỏi không phải “file nào thú vị nhất?”. Câu hỏi là runtime: boot xong state machine nào chạy, task nào được tạo, board config nào chọn pin, audio đi qua buffer/codec nào, network protocol đổi state UI ra sao. Lesson này dạy cách đi từ quan sát thiết bị thật sang đọc code có trật tự. Checklist trước khi flash bất cứ thứ gì Xác định serial port khi cắm USB-C vào Mac. Chạy flash-id để biết chip/flash thật. Dump full flash và lưu file backup ở nơi rõ ràng. Capture boot log firmware gốc ở 115200 baud. Ghi lại MAC, flash size, PSRAM, reset reason, firmware string nếu có. Chưa tin pinout public nào là đúng cho tới khi probe/scan/nhìn PCB. Path đọc code Xiaozhi sau khi có nền Tìm entry point và app state machine. Tìm board config: pin LCD, touch, codec, I2S, ADC, button. Tìm audio pipeline: mic capture, encode, network, decode, speaker. Tìm protocol: WebSocket/MQTT, activation, session state. Tìm display layer: emoji/state/UI update. Chỉ sau đó mới nghĩ tới custom board config cho DS-02. Kết quả mong muốn không phải “có firmware mới ngay”, mà là bạn đọc được boot log, hiểu map file, biết vì sao có nhiều partition, biết task nào làm gì, và có thể tự thiết kế lab kiểm chứng từng phần cứng. Output của Lesson 10 DS-02 safety checklist Có checklist riêng trước khi flash: serial port, flash-id, full backup, boot log, MAC/flash/PSRAM note. Hardware profile draft Tạo note cho thiết bị thật: chip, flash size, PSRAM, boot log clue, peripheral hypothesis, vùng chưa được ghi đè. Xiaozhi reading path Liệt kê module sẽ đọc theo thứ tự: entry/state, board config, audio pipeline, protocol, display. Lesson 10 self-test Trả lời được: khi nào mới được flash lab nhỏ lên DS-02, và khi nào phải dừng lại."};</script>
 <script>
@@ -801,6 +808,7 @@
   const form = document.querySelector('[data-chat-form]');
   const input = document.querySelector('[data-chat-input]');
   const log = document.querySelector('[data-chat-log]');
+  const voiceButton = document.querySelector('[data-chat-voice]');
   if (!fab || !panel || !form || !input || !log) return;
   const append = (role, text) => {
     const el = document.createElement('div');
@@ -810,31 +818,41 @@
     log.scrollTop = log.scrollHeight;
     return el;
   };
+  const attachAudio = (message, url) => {
+    if (!url) return;
+    const audio = document.createElement('audio');
+    audio.className = 'chat-audio';
+    audio.controls = true;
+    audio.autoplay = true;
+    audio.src = url;
+    message.appendChild(document.createElement('br'));
+    message.appendChild(audio);
+    audio.play().catch(() => {});
+  };
   const setOpen = (open) => {
     panel.classList.toggle('open', open);
     fab.setAttribute('aria-expanded', String(open));
     if (open) setTimeout(() => input.focus(), 60);
   };
-  fab.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
-  close?.addEventListener('click', () => setOpen(false));
-  append('assistant', 'Bạn đang hỏi trong ngữ cảnh: ' + lesson.title + '. Hỏi thẳng chỗ chưa hiểu, mình sẽ giải thích theo bài này.');
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const question = input.value.trim();
-    if (!question) return;
-    input.value = '';
+  const endpoint = (path) => apiBase.replace(/\/$/, '') + path;
+  const lessonSystemPrompt = 'Bạn là tutor firmware ESP32-S3, trả lời bằng tiếng Việt, ngắn gọn nhưng đủ ý. Dựa chủ yếu vào lesson context được cung cấp. Nếu câu hỏi vượt ngoài bài, nói rõ và nối lại với bài học hiện tại. Không bịa thông tin về thiết bị thật nếu lesson chưa có evidence.';
+  const setBusy = (busy) => {
+    const sendButton = form.querySelector('button[type="submit"]');
+    sendButton.disabled = busy;
+    if (voiceButton) voiceButton.disabled = busy && !voiceButton.classList.contains('recording');
+  };
+  const sendTextQuestion = async (question) => {
     append('user', question);
     const pending = append('assistant', 'Đang hỏi Pi agent...');
-    const button = form.querySelector('button[type="submit"]');
-    button.disabled = true;
+    setBusy(true);
     try {
-      const response = await fetch(apiBase.replace(/\/$/, '') + '/chat/completions', {
+      const response = await fetch(endpoint('/chat/completions'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model,
           messages: [
-            { role: 'system', content: 'Bạn là tutor firmware ESP32-S3, trả lời bằng tiếng Việt, ngắn gọn nhưng đủ ý. Dựa chủ yếu vào lesson context được cung cấp. Nếu câu hỏi vượt ngoài bài, nói rõ và nối lại với bài học hiện tại. Không bịa thông tin về thiết bị thật nếu lesson chưa có evidence.' },
+            { role: 'system', content: lessonSystemPrompt },
             { role: 'user', content: 'Lesson title: ' + lesson.title + '\n\nLesson context:\n' + lesson.text.slice(0, 12000) + '\n\nCâu hỏi của mình: ' + question }
           ]
         })
@@ -846,10 +864,85 @@
       pending.className = 'chat-msg error';
       pending.textContent = 'Chat chưa gọi được gateway: ' + (error?.message || String(error));
     } finally {
-      button.disabled = false;
+      setBusy(false);
       input.focus();
       log.scrollTop = log.scrollHeight;
     }
+  };
+  const sendVoiceQuestion = async (blob) => {
+    const userMessage = append('user', '[voice] Đã gửi câu hỏi bằng giọng nói.');
+    const pending = append('assistant', 'Đang nghe bằng Whisper local...');
+    setBusy(true);
+    try {
+      const body = new FormData();
+      body.append('model', model);
+      body.append('lesson_title', lesson.title);
+      body.append('lesson_context', lesson.text.slice(0, 12000));
+      body.append('audio', blob, 'question.webm');
+      const response = await fetch(endpoint('/voice/messages'), { method: 'POST', body });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error?.message || 'Gateway trả lỗi ' + response.status);
+      userMessage.textContent = '[voice transcript] ' + (data.transcript || '(không nghe được transcript)');
+      pending.textContent = data.text || 'Không có nội dung trả lời từ gateway.';
+      attachAudio(pending, data.audio_url);
+    } catch (error) {
+      pending.className = 'chat-msg error';
+      pending.textContent = 'Voice chat chưa gọi được gateway: ' + (error?.message || String(error));
+    } finally {
+      setBusy(false);
+      log.scrollTop = log.scrollHeight;
+    }
+  };
+  let recorder = null;
+  let chunks = [];
+  const stopRecording = () => {
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+  };
+  const startRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      append('error', 'Trình duyệt này chưa hỗ trợ ghi âm trong web chat.');
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chunks = [];
+    const preferred = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : '';
+    recorder = new MediaRecorder(stream, preferred ? { mimeType: preferred } : undefined);
+    recorder.addEventListener('dataavailable', (event) => {
+      if (event.data.size > 0) chunks.push(event.data);
+    });
+    recorder.addEventListener('stop', () => {
+      stream.getTracks().forEach((track) => track.stop());
+      voiceButton?.classList.remove('recording');
+      if (voiceButton) voiceButton.textContent = 'Ghi âm';
+      const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+      if (blob.size > 0) void sendVoiceQuestion(blob);
+    });
+    recorder.start();
+    voiceButton?.classList.add('recording');
+    if (voiceButton) voiceButton.textContent = 'Dừng';
+  };
+  fab.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
+  close?.addEventListener('click', () => setOpen(false));
+  voiceButton?.addEventListener('click', async () => {
+    try {
+      if (voiceButton.classList.contains('recording')) {
+        stopRecording();
+      } else {
+        await startRecording();
+      }
+    } catch (error) {
+      append('error', 'Không mở được microphone: ' + (error?.message || String(error)));
+      voiceButton?.classList.remove('recording');
+      if (voiceButton) voiceButton.textContent = 'Ghi âm';
+    }
+  });
+  append('assistant', 'Bạn đang hỏi trong ngữ cảnh: ' + lesson.title + '. Hỏi thẳng chỗ chưa hiểu, hoặc bấm Ghi âm để hỏi bằng giọng nói.');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    await sendTextQuestion(question);
   });
 })();
 </script>

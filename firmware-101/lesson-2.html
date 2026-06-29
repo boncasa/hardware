@@ -700,8 +700,15 @@
     .chat-msg.error { background: #fff4ed; border: 1px solid #fed7aa; color: #7c2d12; }
     .chat-form { display: grid; gap: 0.55rem; padding: 0.85rem; border-top: 1px solid var(--line); }
     .chat-input { width: 100%; min-height: 78px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem; font: inherit; line-height: 1.45; }
-    .chat-send { border: 0; border-radius: 999px; background: var(--ink); color: #fff; padding: 0.68rem 0.9rem; font-weight: 800; cursor: pointer; }
-    .chat-send:disabled { opacity: 0.58; cursor: wait; }
+    .chat-actions { display: flex; gap: 0.55rem; align-items: center; }
+    .chat-send,
+    .chat-voice { border: 0; border-radius: 999px; padding: 0.68rem 0.9rem; font-weight: 800; cursor: pointer; }
+    .chat-send { background: var(--ink); color: #fff; }
+    .chat-voice { background: #eef8fb; color: var(--accent); border: 1px solid #b8dce8; }
+    .chat-voice.recording { background: #fff3ed; color: #9a3412; border-color: #fed7aa; }
+    .chat-send:disabled,
+    .chat-voice:disabled { opacity: 0.58; cursor: wait; }
+    .chat-audio { display: block; width: 100%; margin-top: 0.55rem; }
     @media (max-width: 760px) { .topbar { align-items: stretch; flex-direction: column; } .page-next { align-items: stretch; flex-direction: column; } .chat-fab { right: 14px; bottom: 14px; } .chat-panel { right: 14px; bottom: 82px; } }
 
   </style>
@@ -822,7 +829,7 @@ python -m serial.tools.miniterm /dev/cu.usbmodemXXXX 115200</code></pre>
   <aside class="chat-panel" data-chat-panel aria-label="Chat hỏi bài học">
     <div class="chat-head"><div><strong>Hỏi về bài này</strong><small>Pi agent gateway / OpenAI-compatible API</small></div><button class="chat-close" type="button" data-chat-close aria-label="Đóng chat">x</button></div>
     <div class="chat-log" data-chat-log></div>
-    <form class="chat-form" data-chat-form><textarea class="chat-input" data-chat-input placeholder="Hỏi chỗ chưa hiểu trong lesson này..."></textarea><button class="chat-send" type="submit">Gửi câu hỏi</button></form>
+    <form class="chat-form" data-chat-form><textarea class="chat-input" data-chat-input placeholder="Hỏi chỗ chưa hiểu trong lesson này..."></textarea><div class="chat-actions"><button class="chat-voice" type="button" data-chat-voice>Ghi âm</button><button class="chat-send" type="submit">Gửi câu hỏi</button></div></form>
   </aside>
 <script>window.LESSON_CONTEXT = {"title":"Lesson 2: Boot flow: từ reset tới app_main()","text":"Lesson 2 Boot flow: từ reset tới app_main() Khi cấp nguồn, CPU không tự nhiên nhảy vào code app của bạn. ESP32-S3 có ROM bootloader nằm cố định trong chip. ROM quyết định boot mode, load bootloader cấp hai từ SPI flash, rồi bootloader cấp hai chọn app partition và chạy app. Bài học lý thuyết Reset là điểm bắt đầu vật lý: nguồn vừa lên, nút reset được nhấn, watchdog kéo reset, hoặc phần mềm yêu cầu reboot. Sau reset, CPU phải biết chạy instruction đầu tiên ở đâu. Với ESP32-S3, instruction đầu tiên không nằm trong project của bạn, mà nằm trong ROM bootloader do Espressif ghi sẵn trong chip từ nhà máy. ROM bootloader làm những việc cực sớm: đọc trạng thái boot mode, kiểm tra có vào download mode không, tìm flash, đọc image header, rồi load second-stage bootloader từ SPI flash. Second-stage bootloader là phần được ESP-IDF build ra cùng project. Nó biết partition table, flash mode, flash size, app slot nào đang active, OTA state có hợp lệ không, rồi mới load app firmware. app_main() vì vậy không phải “dòng đầu tiên của thiết bị”. Nó chỉ là entry point của app sau khi ROM, bootloader, flash mapping, partition decision, một phần runtime ESP-IDF đã chuẩn bị xong. Nếu bootloader chọn sai partition, flash setting sai, hoặc chip vào download mode, app của bạn chưa bao giờ chạy tới app_main() . Khi annotate boot log, đừng đọc như log web server. Hãy chia theo phase. Dòng rất sớm thường thuộc ROM/bootloader. Dòng nói flash mode, clock, partition table, loaded app là bootloader/app loader. Dòng do code bạn in ra mới là app. Kỹ năng này giúp bạn biết bug nằm trước app hay trong app. Cách nghĩ quan trọng nhất của lesson này: boot là một chuỗi bàn giao trách nhiệm. ROM chỉ biết đủ để tìm flash và nạp bootloader. Bootloader biết đủ để hiểu partition và chọn app. App chỉ bắt đầu khi môi trường tối thiểu đã sẵn sàng. Nếu thiết bị chết trước dòng log app đầu tiên, sửa app_main() thường không giải quyết gì. Ví dụ đọc boot log bằng mắt firmware Khi thấy một log kiểu rst:0x1 , boot:0x8 , SPIWP , mode:DIO , load:0x3f... , bạn chưa cần hiểu hết từng mã ngay. Việc đầu tiên là đánh dấu: đây là đoạn rất sớm, trước app. Sau đó tìm các dòng có tên bootloader/partition: chúng cho biết flash đang được đọc ra sao và app nào được chọn. Chỉ khi thấy log do project in ra, ví dụ Hello world hoặc tên component app, bạn mới bước vào vùng lỗi của application. Hiểu sai thường gặp: tưởng reset là lúc app “restart function main”. Thật ra reset đưa chip về trạng thái gần như mới cấp nguồn. Toàn bộ boot chain chạy lại. Vì vậy reset loop có thể do nguồn, boot mode, flash, partition, bootloader, hoặc app. Lesson này dạy bạn tách năm khả năng đó trước khi đoán bug. 1. Reset Nguồn lên, reset button, watchdog, brownout hoặc software reset. 2. ROM bootloader Code cố định trong chip, đọc strapping pins và boot mode. 3. 2nd bootloader Nằm trong flash, do ESP-IDF build ra. 4. Partition table Biết app nằm ở đâu, NVS ở đâu, OTA slot nào active. 5. app_main() Code ứng dụng bắt đầu chạy, tạo task và init driver. Boot mode ESP32-S3 có thể boot từ flash hoặc vào download mode để flash firmware qua USB/UART. Trạng thái một số pin lúc reset quyết định boot mode. Vì vậy nút BOOT , RESET , USB serial, và esptool liên quan trực tiếp tới nhau. Lab đọc boot log # Sau khi cài ESP-IDF hoặc esptool/pyserial idf.py monitor # Hoặc dùng serial terminal nếu đã biết port python -m serial.tools.miniterm /dev/cu.usbmodemXXXX 115200 Cách đọc boot log theo lớp Reset cause Tìm dòng cho biết reset vì power-on, software reset, watchdog, brownout, hay panic. ROM phase Nhận ra đoạn rất sớm trước khi bootloader ESP-IDF in log app. Bootloader phase Tìm flash mode, flash size, partition table, selected app partition. App phase Tìm dòng đầu tiên do app của bạn log ra, thường sau khi scheduler/runtime sẵn sàng. Mình thấy reset reason trong log. Mình thấy chip revision, flash mode, flash size hoặc warning liên quan flash. Mình phân biệt được log của bootloader và log của app. Output của Lesson 2 Boot flow diagram Vẽ lại chuỗi Reset -> ROM bootloader -> 2nd bootloader -> partition table -> app_main() bằng lời của bạn. Boot log annotation Copy 8-15 dòng boot log và đánh dấu dòng nào thuộc reset, ROM, bootloader, app. Lesson 2 vocabulary Giải thích được reset reason, boot mode, strapping pin, download mode, second-stage bootloader. Lesson 2 self-test Trả lời được: vì sao app_main() không phải dòng code đầu tiên chạy sau khi cấp nguồn?"};</script>
 <script>
@@ -836,6 +843,7 @@ python -m serial.tools.miniterm /dev/cu.usbmodemXXXX 115200</code></pre>
   const form = document.querySelector('[data-chat-form]');
   const input = document.querySelector('[data-chat-input]');
   const log = document.querySelector('[data-chat-log]');
+  const voiceButton = document.querySelector('[data-chat-voice]');
   if (!fab || !panel || !form || !input || !log) return;
   const append = (role, text) => {
     const el = document.createElement('div');
@@ -845,31 +853,41 @@ python -m serial.tools.miniterm /dev/cu.usbmodemXXXX 115200</code></pre>
     log.scrollTop = log.scrollHeight;
     return el;
   };
+  const attachAudio = (message, url) => {
+    if (!url) return;
+    const audio = document.createElement('audio');
+    audio.className = 'chat-audio';
+    audio.controls = true;
+    audio.autoplay = true;
+    audio.src = url;
+    message.appendChild(document.createElement('br'));
+    message.appendChild(audio);
+    audio.play().catch(() => {});
+  };
   const setOpen = (open) => {
     panel.classList.toggle('open', open);
     fab.setAttribute('aria-expanded', String(open));
     if (open) setTimeout(() => input.focus(), 60);
   };
-  fab.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
-  close?.addEventListener('click', () => setOpen(false));
-  append('assistant', 'Bạn đang hỏi trong ngữ cảnh: ' + lesson.title + '. Hỏi thẳng chỗ chưa hiểu, mình sẽ giải thích theo bài này.');
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const question = input.value.trim();
-    if (!question) return;
-    input.value = '';
+  const endpoint = (path) => apiBase.replace(/\/$/, '') + path;
+  const lessonSystemPrompt = 'Bạn là tutor firmware ESP32-S3, trả lời bằng tiếng Việt, ngắn gọn nhưng đủ ý. Dựa chủ yếu vào lesson context được cung cấp. Nếu câu hỏi vượt ngoài bài, nói rõ và nối lại với bài học hiện tại. Không bịa thông tin về thiết bị thật nếu lesson chưa có evidence.';
+  const setBusy = (busy) => {
+    const sendButton = form.querySelector('button[type="submit"]');
+    sendButton.disabled = busy;
+    if (voiceButton) voiceButton.disabled = busy && !voiceButton.classList.contains('recording');
+  };
+  const sendTextQuestion = async (question) => {
     append('user', question);
     const pending = append('assistant', 'Đang hỏi Pi agent...');
-    const button = form.querySelector('button[type="submit"]');
-    button.disabled = true;
+    setBusy(true);
     try {
-      const response = await fetch(apiBase.replace(/\/$/, '') + '/chat/completions', {
+      const response = await fetch(endpoint('/chat/completions'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model,
           messages: [
-            { role: 'system', content: 'Bạn là tutor firmware ESP32-S3, trả lời bằng tiếng Việt, ngắn gọn nhưng đủ ý. Dựa chủ yếu vào lesson context được cung cấp. Nếu câu hỏi vượt ngoài bài, nói rõ và nối lại với bài học hiện tại. Không bịa thông tin về thiết bị thật nếu lesson chưa có evidence.' },
+            { role: 'system', content: lessonSystemPrompt },
             { role: 'user', content: 'Lesson title: ' + lesson.title + '\n\nLesson context:\n' + lesson.text.slice(0, 12000) + '\n\nCâu hỏi của mình: ' + question }
           ]
         })
@@ -881,10 +899,85 @@ python -m serial.tools.miniterm /dev/cu.usbmodemXXXX 115200</code></pre>
       pending.className = 'chat-msg error';
       pending.textContent = 'Chat chưa gọi được gateway: ' + (error?.message || String(error));
     } finally {
-      button.disabled = false;
+      setBusy(false);
       input.focus();
       log.scrollTop = log.scrollHeight;
     }
+  };
+  const sendVoiceQuestion = async (blob) => {
+    const userMessage = append('user', '[voice] Đã gửi câu hỏi bằng giọng nói.');
+    const pending = append('assistant', 'Đang nghe bằng Whisper local...');
+    setBusy(true);
+    try {
+      const body = new FormData();
+      body.append('model', model);
+      body.append('lesson_title', lesson.title);
+      body.append('lesson_context', lesson.text.slice(0, 12000));
+      body.append('audio', blob, 'question.webm');
+      const response = await fetch(endpoint('/voice/messages'), { method: 'POST', body });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error?.message || 'Gateway trả lỗi ' + response.status);
+      userMessage.textContent = '[voice transcript] ' + (data.transcript || '(không nghe được transcript)');
+      pending.textContent = data.text || 'Không có nội dung trả lời từ gateway.';
+      attachAudio(pending, data.audio_url);
+    } catch (error) {
+      pending.className = 'chat-msg error';
+      pending.textContent = 'Voice chat chưa gọi được gateway: ' + (error?.message || String(error));
+    } finally {
+      setBusy(false);
+      log.scrollTop = log.scrollHeight;
+    }
+  };
+  let recorder = null;
+  let chunks = [];
+  const stopRecording = () => {
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+  };
+  const startRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      append('error', 'Trình duyệt này chưa hỗ trợ ghi âm trong web chat.');
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chunks = [];
+    const preferred = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : '';
+    recorder = new MediaRecorder(stream, preferred ? { mimeType: preferred } : undefined);
+    recorder.addEventListener('dataavailable', (event) => {
+      if (event.data.size > 0) chunks.push(event.data);
+    });
+    recorder.addEventListener('stop', () => {
+      stream.getTracks().forEach((track) => track.stop());
+      voiceButton?.classList.remove('recording');
+      if (voiceButton) voiceButton.textContent = 'Ghi âm';
+      const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+      if (blob.size > 0) void sendVoiceQuestion(blob);
+    });
+    recorder.start();
+    voiceButton?.classList.add('recording');
+    if (voiceButton) voiceButton.textContent = 'Dừng';
+  };
+  fab.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
+  close?.addEventListener('click', () => setOpen(false));
+  voiceButton?.addEventListener('click', async () => {
+    try {
+      if (voiceButton.classList.contains('recording')) {
+        stopRecording();
+      } else {
+        await startRecording();
+      }
+    } catch (error) {
+      append('error', 'Không mở được microphone: ' + (error?.message || String(error)));
+      voiceButton?.classList.remove('recording');
+      if (voiceButton) voiceButton.textContent = 'Ghi âm';
+    }
+  });
+  append('assistant', 'Bạn đang hỏi trong ngữ cảnh: ' + lesson.title + '. Hỏi thẳng chỗ chưa hiểu, hoặc bấm Ghi âm để hỏi bằng giọng nói.');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    await sendTextQuestion(question);
   });
 })();
 </script>
