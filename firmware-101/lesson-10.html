@@ -869,8 +869,7 @@
       log.scrollTop = log.scrollHeight;
     }
   };
-  const sendVoiceQuestion = async (blob) => {
-    const userMessage = append('user', '[voice] Đã gửi câu hỏi bằng giọng nói.');
+  const transcribeVoiceQuestion = async (blob) => {
     const pending = append('assistant', 'Đang nghe bằng Whisper local...');
     setBusy(true);
     try {
@@ -879,15 +878,18 @@
       body.append('lesson_title', lesson.title);
       body.append('lesson_context', lesson.text.slice(0, 12000));
       body.append('audio', blob, 'question.webm');
-      const response = await fetch(endpoint('/voice/messages'), { method: 'POST', body });
+      const response = await fetch(endpoint('/voice/transcriptions'), { method: 'POST', body });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data?.error?.message || 'Gateway trả lỗi ' + response.status);
-      userMessage.textContent = '[voice transcript] ' + (data.transcript || '(không nghe được transcript)');
-      pending.textContent = data.text || 'Không có nội dung trả lời từ gateway.';
-      attachAudio(pending, data.audio_url);
+      const transcript = (data.transcript || data.text || '').trim();
+      if (!transcript) throw new Error('Whisper không nghe được transcript.');
+      input.value = transcript;
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+      pending.textContent = 'Mình nghe được câu hỏi ở ô nhập rồi. Kiểm tra lại text rồi bấm Gửi câu hỏi để gửi.';
     } catch (error) {
       pending.className = 'chat-msg error';
-      pending.textContent = 'Voice chat chưa gọi được gateway: ' + (error?.message || String(error));
+      pending.textContent = 'Voice transcript chưa gọi được gateway: ' + (error?.message || String(error));
     } finally {
       setBusy(false);
       log.scrollTop = log.scrollHeight;
@@ -915,7 +917,7 @@
       voiceButton?.classList.remove('recording');
       if (voiceButton) voiceButton.textContent = 'Ghi âm';
       const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-      if (blob.size > 0) void sendVoiceQuestion(blob);
+      if (blob.size > 0) void transcribeVoiceQuestion(blob);
     });
     recorder.start();
     voiceButton?.classList.add('recording');
@@ -936,7 +938,7 @@
       if (voiceButton) voiceButton.textContent = 'Ghi âm';
     }
   });
-  append('assistant', 'Bạn đang hỏi trong ngữ cảnh: ' + lesson.title + '. Hỏi thẳng chỗ chưa hiểu, hoặc bấm Ghi âm để hỏi bằng giọng nói.');
+  append('assistant', 'Bạn đang hỏi trong ngữ cảnh: ' + lesson.title + '. Hỏi thẳng chỗ chưa hiểu, hoặc bấm Ghi âm để chuyển giọng nói thành text trước khi gửi.');
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const question = input.value.trim();
